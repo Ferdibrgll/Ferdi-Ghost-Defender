@@ -324,10 +324,8 @@ def scan_folder_action(self):
         
         self.output.append(f"[+] Scan complete: {file_count} files, {infected_count} threats")
 def run_app():
-app = QApplication(sys.argv)
-window = FerdiGhost()
-window.show()
-sys.exit(app.exec_())
-
-if name == "main":
-run_app()
+    os.environ["XDG_RUNTIME_DIR"] = "/tmp/runtime-root"
+    app = QApplication(sys.argv)
+    window = FerdiGhost()
+    window.show()
+    sys.exit(app.exec_())

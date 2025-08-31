@@ -1,17 +1,24 @@
 import os
 import sys
 import webbrowser
+import psutil
+import socket
+import platform
+from datetime import datetime
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QPushButton, QVBoxLayout, QLabel,
     QFileDialog, QTextEdit, QHBoxLayout, QMessageBox, QDialog, QListWidget,
-    QDialogButtonBox, QAbstractItemView, QProgressBar
+    QDialogButtonBox, QAbstractItemView
 )
 from PyQt5.QtGui import QFont, QTextCursor
 from PyQt5.QtCore import Qt, QTimer
-import hashlib
-import re
 
-# ------------------- SIGNATURES -------------------
+try:
+    from Crypto.Cipher import AES
+except ImportError:
+    print("PyCryptoDome not found. Install via: pip3 install pycryptodome")
+
+# ------------------- Signature definitions -------------------
 SIGNATURES = {
     "RAT": [b"socket.connect", b"com.rat", b"reverse_shell"],
     "BACKDOOR": [b"/dev/tcp/", b"bash -i", b"nohup"],
@@ -19,74 +26,58 @@ SIGNATURES = {
     "MALWARE": [b"keylogger", b"chmod 777", b"rm -rf", b"wget http"]
 }
 
-# ------------------- ASCII ART -------------------
+# ------------------- ASCII Banner -------------------
 BANNER_ASCII = r"""
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⢀⡶⣿⣿⣿⣦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣾⣿⣿⣿⣿⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⢺⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣿⣻⣿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠿⠶⠾⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+  ███████╗███████╗██████╗ ███████╗██████╗ ██╗███████╗██████╗ 
+  ██╔════╝██╔════╝██╔══██╗██╔════╝██╔══██╗██║██╔════╝██╔══██╗
+  ███████╗█████╗  ██████╔╝█████╗  ██████╔╝██║█████╗  ██████╔╝
+  ╚════██║██╔══╝  ██╔══██╗██╔══╝  ██╔═══╝ ██║██╔══╝  ██╔══██╗
+  ███████║███████╗██║  ██║███████╗██║     ██║███████╗██║  ██║
+  ╚══════╝╚══════╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝
 """
 
+# ------------------- Header -------------------
 HEADER_ASCII = r"""
-   _____  _    _   ____    _____  _______             _   _  _______  _____     __      __ _____  _____   _    _   _____ 
-  / ____|| |  | | / __ \  / ____||__   __|     /\    | \ | ||__   __||_   _|    \ \    / /|_   _||  __ \ | |  | | / ____|
- | |  __ | |__| || |  | || (___     | |       /  \   |  \| |   | |     | | ______\ \  / /   | |  | |__) || |  | || (___  
- | | |_ ||  __  || |  | | \___ \    | |      / /\ \  | . ` |   | |     | ||______|\ \/ /    | |  |  _  / | |  | | \___ \
- | |__| || |  | || |__| | ____) |   | |     / ____ \ | |\  |   | |    _| |_        \  /    _| |_ | | \ \ | |__| | ____) |
-  \_____||_|  |_| \____/ |_____/    |_|    /_/    \_\|_| \_|   |_|   |_____|        \/    |_____||_|  \_\ \____/ |_____/
+FERDI GHOST DEFENDER - HACKER/AGENT MODE
 """
 
-# ------------------- SOCIAL LINKS -------------------
 LINKS = {
     "YouTube": "https://www.youtube.com/@Ferdibirgul",
     "Instagram": "https://instagram.com/ferdibirgull",
     "TikTok": "https://tiktok.com/@ferdibirgull",
     "GitHub": "https://github.com/ferdibrgll",
-    "Blog": "https://ferdibirgull.com"
+    "Blog": "https://ferdiblog.com",
+    "Linktree": "https://linktr.ee/ferdibirgll"
 }
 
-# ------------------- HELPER FUNCTIONS -------------------
-def file_hash(path):
-    try:
-        h = hashlib.sha256()
-        with open(path, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                h.update(chunk)
-        return h.hexdigest()
-    except:
-        return None
-
+# ------------------- File Scan -------------------
 def scan_file(path):
     try:
-        if os.path.getsize(path) > 50 * 1024 * 1024:
-            return (f"[SKIPPED] {path} (File too large)", None)
-
         with open(path, "rb") as f:
             data = f.read()
             for family, sigs in SIGNATURES.items():
                 for sig in sigs:
-                    if re.search(sig, data):
-                        return (f"[INFECTED: {family}] {path}", family)
+                    if sig in data:
+                        log_threat(path, family)
+                        return (f"[ALERT: {family}] {path}", family)
         return (f"[CLEAN] {path}", None)
-    except PermissionError:
-        return (f"[PERMISSION ERROR] {path}", None)
     except Exception as e:
         return (f"[ERROR] {path}: {str(e)}", None)
 
-def scan_directory(path, progress_bar=None):
+def scan_directory(path):
     results = []
-    files = [os.path.join(root, name)
-             for root, _, fs in os.walk(path)
-             for name in fs]
-    total = len(files)
-    for i, fpath in enumerate(files, 1):
-        result, family = scan_file(fpath)
-        results.append((result, family))
-        if progress_bar:
-            progress_bar.setValue(int((i/total)*100))
+    for root, _, files in os.walk(path):
+        for name in files:
+            fpath = os.path.join(root, name)
+            results.append(scan_file(fpath))
     return results
 
-# ------------------- GUI DIALOG -------------------
+# ------------------- Log -------------------
+def log_threat(path, family):
+    with open("ferdi_log.txt", "a") as f:
+        f.write(f"{datetime.now()} | [{family}] {path}\n")
+
+# ------------------- Threat Dialog -------------------
 class ThreatDialog(QDialog):
     def __init__(self, threats, parent=None):
         super().__init__(parent)
@@ -120,57 +111,55 @@ class ThreatDialog(QDialog):
         self.selected_option = choice
         self.accept()
 
-# ------------------- MAIN APPLICATION -------------------
+# ------------------- FerdiGhost GUI -------------------
 class FerdiGhost(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("ferdi ghost defender v1.1")
-        self.setFixedSize(1000, 780)
+        self.setWindowTitle("ferdi ghost defender")
+        self.setFixedSize(1100, 750)
         self.setStyleSheet("background-color: black; color: #00ff66;")
         self.setFont(QFont("Courier New", 10))
         self.detected_files = []
 
         layout = QVBoxLayout()
 
-        # Banner & Header
+        # Banner
         self.banner = QLabel(BANNER_ASCII)
         self.banner.setTextFormat(Qt.PlainText)
         self.banner.setAlignment(Qt.AlignCenter)
         self.banner.setFont(QFont("Courier New", 9))
-        self.banner.setStyleSheet("color: #00ff66;")
         layout.addWidget(self.banner)
 
+        # Header
         self.header = QLabel(HEADER_ASCII)
         self.header.setTextFormat(Qt.PlainText)
         self.header.setAlignment(Qt.AlignCenter)
         self.header.setFont(QFont("Courier New", 10))
-        self.header.setStyleSheet("color: #00ff66;")
         layout.addWidget(self.header)
 
-        # Output Text Box
+        # Output
         self.output = QTextEdit()
         self.output.setReadOnly(True)
         self.output.setStyleSheet("background-color: black; border: 1px solid #00ff66; color: #00ff66;")
         layout.addWidget(self.output)
 
-        # Progress Bar
-        self.progress = QProgressBar()
-        self.progress.setValue(0)
-        self.progress.setStyleSheet("QProgressBar {color: #00ff66;}")
-        layout.addWidget(self.progress)
-
         # Buttons
         btns = QHBoxLayout()
         self.file_btn = QPushButton("Scan File")
         self.folder_btn = QPushButton("Scan Folder")
-        for btn in (self.file_btn, self.folder_btn):
+        self.net_btn = QPushButton("Network Scan")
+        self.proc_btn = QPushButton("Process Scan")
+        for btn in [self.file_btn, self.folder_btn, self.net_btn, self.proc_btn]:
             btn.setStyleSheet("background-color: #111; color: #00ff66; padding: 5px 10px;")
             btns.addWidget(btn)
-        self.file_btn.clicked.connect(self.scan_file_action)
-        self.folder_btn.clicked.connect(self.scan_folder_action)
         layout.addLayout(btns)
 
-        # Social Links
+        self.file_btn.clicked.connect(self.scan_file_action)
+        self.folder_btn.clicked.connect(self.scan_folder_action)
+        self.net_btn.clicked.connect(self.network_scan)
+        self.proc_btn.clicked.connect(self.process_scan)
+
+        # Links
         links = QHBoxLayout()
         for name, url in LINKS.items():
             link_btn = QPushButton(name)
@@ -180,14 +169,13 @@ class FerdiGhost(QWidget):
         layout.addLayout(links)
 
         self.setLayout(layout)
-
-        # Typing Animation
-        self.typing_text = ">> Ferdi Ghost Defender v1.1 Activated...\n"
+        self.typing_text = ">> Ferdi Ghost Defender Activated...\n"
         self.typing_index = 0
         self.timer = QTimer()
         self.timer.timeout.connect(self.animate_typing)
         self.timer.start(45)
 
+    # ------------------- Animasyon -------------------
     def animate_typing(self):
         if self.typing_index < len(self.typing_text):
             self.output.moveCursor(QTextCursor.End)
@@ -196,13 +184,13 @@ class FerdiGhost(QWidget):
         else:
             self.timer.stop()
 
+    # ------------------- File Scan Actions -------------------
     def scan_file_action(self):
         self.detected_files = []
         path, _ = QFileDialog.getOpenFileName(self, "Select File")
         if path:
             result, family = scan_file(path)
             self.output.append(result)
-            self.log_result(result)
             if family:
                 self.detected_files.append((path, family))
                 self.handle_threats()
@@ -211,16 +199,40 @@ class FerdiGhost(QWidget):
         self.detected_files = []
         path = QFileDialog.getExistingDirectory(self, "Select Folder")
         if path:
-            results = scan_directory(path, progress_bar=self.progress)
+            results = scan_directory(path)
             for res, family in results:
                 self.output.append(res)
-                self.log_result(res)
                 if family:
                     self.detected_files.append((res.split("] ")[1], family))
-            self.progress.setValue(0)
             if self.detected_files:
                 self.handle_threats()
 
+    # ------------------- Network & Process Scan -------------------
+    def network_scan(self):
+        self.output.append(">> Starting Network Scan...")
+        hostname = socket.gethostname()
+        ip = socket.gethostbyname(hostname)
+        self.output.append(f"Hostname: {hostname}, IP: {ip}")
+        self.output.append("Open Ports (TCP 20-1024):")
+        for port in range(20, 1030):
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(0.05)
+            try:
+                s.connect((ip, port))
+                self.output.append(f"[OPEN] Port {port}")
+            except:
+                pass
+            s.close()
+
+    def process_scan(self):
+        self.output.append(">> Scanning Running Processes...")
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                self.output.append(f"{proc.info['pid']:>5} | {proc.info['name']}")
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+    # ------------------- Threat Handling -------------------
     def handle_threats(self):
         threat_lines = [f"[{family}] {path}" for path, family in self.detected_files]
         dialog = ThreatDialog(threat_lines, self)
@@ -231,7 +243,6 @@ class FerdiGhost(QWidget):
                     try:
                         os.remove(path)
                         self.output.append(f"[DELETED] {path}")
-                        self.log_result(f"[DELETED] {path}")
                     except Exception as e:
                         self.output.append(f"[ERROR] {path}: {e}")
             elif choice == "manual":
@@ -246,20 +257,12 @@ class FerdiGhost(QWidget):
                         try:
                             os.remove(path)
                             self.output.append(f"[DELETED] {path}")
-                            self.log_result(f"[DELETED] {path}")
                         except Exception as e:
                             self.output.append(f"[ERROR] {path}: {e}")
             else:
                 self.output.append("Skipped all infected files.")
 
-    def log_result(self, message):
-        try:
-            with open("scan_results.log", "a") as f:
-                f.write(message + "\n")
-        except:
-            pass
-
-# ------------------- RUN APPLICATION -------------------
+# ------------------- Run App -------------------
 def run_app():
     os.environ["XDG_RUNTIME_DIR"] = "/tmp/runtime-root"
     app = QApplication(sys.argv)

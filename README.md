@@ -82,7 +82,7 @@ Takip edin, selam verin, hack dünyasını birlikte keşfedelim!
 🌐 **Connect With Us**  
 
   
-[![YouTube](https://img.shields.io/badge/YouTube-Ferdi_Ghost-red?logo=youtube)](https://www.youtube.com/@Ferdibirgul)  
+[![YouTube](https://img.shields.io/badge/YouTube-Ferdi_Ghost-red?logo=youtube)](https://www.youtube.com/@Ferdibirgul.)  
 [![Instagram](https://img.shields.io/badge/Instagram-ferdibirgull-purple?logo=instagram)](https://instagram.com/ferdibirgull)   
 [![TikTok](https://img.shields.io/badge/TikTok-ferdibirgull-black?logo=tiktok)](https://tiktok.com/@ferdibirgull)  
 [![Linktree](https://img.shields.io/badge/Linktree-Ferdi-green?logo=linktree)](https://linktr.ee/ferdibirgull)

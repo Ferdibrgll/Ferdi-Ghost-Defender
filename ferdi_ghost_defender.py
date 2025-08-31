@@ -1,6 +1,8 @@
 import os
 import sys
 import webbrowser
+import socket
+import subprocess
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QPushButton, QVBoxLayout, QLabel,
     QFileDialog, QTextEdit, QHBoxLayout, QMessageBox, QDialog, QListWidget,
@@ -52,6 +54,7 @@ def scan_file(path):
             for family, sigs in SIGNATURES.items():
                 for sig in sigs:
                     if sig in data:
+                        log_threat(f"[INFECTED: {family}] {path}")
                         return (f"[INFECTED: {family}] {path}", family)
         return (f"[CLEAN] {path}", None)
     except Exception as e:
@@ -64,6 +67,11 @@ def scan_directory(path):
             fpath = os.path.join(root, name)
             results.append(scan_file(fpath))
     return results
+
+# --- Threat Logger ---
+def log_threat(message):
+    with open("threat_log.txt", "a") as log_file:
+        log_file.write(message + "\n")
 
 # --- Threat Dialog ---
 class ThreatDialog(QDialog):
@@ -99,11 +107,29 @@ class ThreatDialog(QDialog):
         self.selected_option = choice
         self.accept()
 
+# --- Network Scanner ---
+def scan_network():
+    devices = []
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+    ip_base = ".".join(local_ip.split(".")[:3]) + "."
+    for i in range(1, 255):
+        ip = ip_base + str(i)
+        try:
+            socket.setdefaulttimeout(0.1)
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((ip, 80))
+            devices.append(ip)
+            s.close()
+        except:
+            continue
+    return devices
+
 # --- Main App ---
 class FerdiGhost(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("FERDI GHOST DEFENDER")
+        self.setWindowTitle("FERDI GHOST 2.0")
         self.setFixedSize(1000, 720)
         self.setStyleSheet("background-color: black; color: #00ff66;")
         self.setFont(QFont("Courier New", 10))
@@ -132,9 +158,11 @@ class FerdiGhost(QWidget):
         btns = QHBoxLayout()
         self.file_btn = QPushButton("Scan File")
         self.folder_btn = QPushButton("Scan Folder")
+        self.network_btn = QPushButton("Network Scan")
         self.file_btn.clicked.connect(self.scan_file_action)
         self.folder_btn.clicked.connect(self.scan_folder_action)
-        for btn in (self.file_btn, self.folder_btn):
+        self.network_btn.clicked.connect(self.network_scan_action)
+        for btn in (self.file_btn, self.folder_btn, self.network_btn):
             btn.setStyleSheet("background-color: #111; color: #00ff66; padding: 5px 10px;")
             btns.addWidget(btn)
         layout.addLayout(btns)
@@ -151,7 +179,7 @@ class FerdiGhost(QWidget):
         self.setLayout(layout)
 
         # --- Typing Effect ---
-        self.typing_text = ">> Ferdi Ghost Defender Activated...\n"
+        self.typing_text = ">> Ferdi Ghost Defender 2.0 Activated...\n"
         self.typing_index = 0
         self.timer = QTimer()
         self.timer.timeout.connect(self.animate_typing)
@@ -165,7 +193,7 @@ class FerdiGhost(QWidget):
         else:
             self.timer.stop()
 
-    # --- File Scan ---
+    # --- Scan Actions ---
     def scan_file_action(self):
         self.detected_files = []
         path, _ = QFileDialog.getOpenFileName(self, "Select File")
@@ -176,7 +204,6 @@ class FerdiGhost(QWidget):
                 self.detected_files.append((path, family))
                 self.handle_threats()
 
-    # --- Folder Scan ---
     def scan_folder_action(self):
         self.detected_files = []
         path = QFileDialog.getExistingDirectory(self, "Select Folder")
@@ -189,7 +216,6 @@ class FerdiGhost(QWidget):
             if self.detected_files:
                 self.handle_threats()
 
-    # --- Threat Handling ---
     def handle_threats(self):
         threat_lines = [f"[{family}] {path}" for path, family in self.detected_files]
         dialog = ThreatDialog(threat_lines, self)
@@ -198,7 +224,7 @@ class FerdiGhost(QWidget):
             if choice == "all":
                 for path, family in self.detected_files:
                     try:
-                        os.rename(path, path + ".quarantine")
+                        os.remove(path)
                         self.output.append(f"[QUARANTINED] {path}")
                     except Exception as e:
                         self.output.append(f"[ERROR] {path}: {e}")
@@ -212,12 +238,22 @@ class FerdiGhost(QWidget):
                     )
                     if confirm == QMessageBox.Yes:
                         try:
-                            os.rename(path, path + ".quarantine")
+                            os.remove(path)
                             self.output.append(f"[QUARANTINED] {path}")
                         except Exception as e:
                             self.output.append(f"[ERROR] {path}: {e}")
             else:
                 self.output.append("Skipped all infected files.")
+
+    def network_scan_action(self):
+        self.output.append(">> Scanning Local Network...")
+        devices = scan_network()
+        if devices:
+            self.output.append("Devices Found:")
+            for dev in devices:
+                self.output.append(f"- {dev}")
+        else:
+            self.output.append("No devices detected.")
 
 # --- Run App ---
 def run_app():

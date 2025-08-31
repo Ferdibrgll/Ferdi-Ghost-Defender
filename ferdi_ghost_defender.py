@@ -17,9 +17,9 @@ from Crypto.Random import get_random_bytes
 import requests
 import base64
 
---------------------------
-ASCII Banner
---------------------------
+#--------------------------
+#ASCII Banner
+#--------------------------
 BANNER_ASCII = r"""
 ███████╗███████╗██████╗ ███████╗██╗ ██████╗ ███████╗
 ██╔════╝██╔════╝██╔══██╗██╔════╝██║██╔═══██╗██╔════╝
@@ -29,9 +29,9 @@ BANNER_ASCII = r"""
 ╚═╝     ╚══════╝╚═╝     ╚══════╝╚═╝ ╚═════╝ ╚══════╝
 """
 
---------------------------
-Malware Signatures
---------------------------
+#--------------------------
+#Malware Signatures
+#--------------------------
 SIGNATURES = {
 "RAT": [b"socket.connect", b"reverse_shell"],
 "BACKDOOR": [b"/dev/tcp/", b"nohup"],

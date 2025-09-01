@@ -391,3 +391,8 @@ def scan_folder_action(self):
 def clear_logs(self):
     """Clear the output console"""
     self.output.clear()
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = FerdiGhost()
+    window.show()
+    sys.exit(app.exec_())

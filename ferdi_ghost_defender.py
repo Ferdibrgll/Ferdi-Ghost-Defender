@@ -1,3 +1,4 @@
+python
 import os
 import sys
 import time
@@ -6,9 +7,11 @@ import threading
 import subprocess
 from pynput import keyboard
 import scapy.all as scapy
-from PyQt5.QtWidgets import (QApplication, QWidget, QPushButton, QVBoxLayout,
+from PyQt5.QtWidgets import (
+QApplication, QWidget, QPushButton, QVBoxLayout,
 QLabel, QTextEdit, QHBoxLayout, QFileDialog,
-QMessageBox, QLineEdit, QGroupBox)
+QMessageBox, QLineEdit, QGroupBox
+)
 from PyQt5.QtGui import QFont, QTextCursor
 from PyQt5.QtCore import Qt, QTimer
 from Crypto.Cipher import AES
@@ -16,9 +19,7 @@ from Crypto.Random import get_random_bytes
 import requests
 import base64
 
-#--------------------------
 #ASCII Banner
-#--------------------------
 BANNER_ASCII = r"""
 ███████╗███████╗██████╗ ███████╗██╗ ██████╗ ███████╗
 ██╔════╝██╔════╝██╔══██╗██╔════╝██║██╔═══██╗██╔════╝
@@ -28,9 +29,7 @@ BANNER_ASCII = r"""
 ╚═╝     ╚══════╝╚═╝     ╚══════╝╚═╝ ╚═════╝ ╚══════╝
 """
 
-#--------------------------
 #Malware Signatures
-#--------------------------
 SIGNATURES = {
 "RAT": [b"socket.connect", b"reverse_shell"],
 "BACKDOOR": [b"/dev/tcp/", b"nohup"],
@@ -42,20 +41,21 @@ SIGNATURES = {
 class FerdiGhost(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("FERDI GHOST ULTIMATE 4.0")
-        self.setFixedSize(1200, 800)
-        self.setStyleSheet("background-color: black; color: #00ff66;")
-        self.setFont(QFont("Courier New", 10))
-        # Advanced attributes
-        self.target_ip = "192.168.1.1"
-        self.target_port = 4444
-        self.socket = None
-        self.listener = None
-        self.is_keylogging = False
-        self.is_sniffing = False
-        self.packet_count = 0
-        self.init_ui()
-    
+self.setWindowTitle("FERDI GHOST ULTIMATE 4.0")
+self.setFixedSize(1200, 800)
+self.setStyleSheet("background-color: black; color: #00ff66;")
+self.setFont(QFont("Courier New", 10))
+# Advanced attributes
+self.target_ip = "192.168.1.1"
+self.target_port = 4444
+self.socket = None
+self.listener = None
+self.is_keylogging = False
+self.is_sniffing = False
+self.packet_count = 0
+self.init_ui()
+
+
 def init_ui(self):
     layout = QVBoxLayout()
 
@@ -103,9 +103,11 @@ def init_ui(self):
     self.decrypt_btn = self.create_button("Decrypt File", self.decrypt_file_action)
     
     # Add buttons to layout
-    for btn in [self.scan_file_btn, self.scan_folder_btn, self.network_scan_btn,
-               self.keylogger_btn, self.sniffer_btn, self.exploit_btn,
-               self.encrypt_btn, self.decrypt_btn]:
+    for btn in [
+        self.scan_file_btn, self.scan_folder_btn, self.network_scan_btn,
+        self.keylogger_btn, self.sniffer_btn, self.exploit_btn,
+        self.encrypt_btn, self.decrypt_btn
+    ]:
         btn_layout.addWidget(btn)
         
     layout.addLayout(btn_layout)
@@ -158,7 +160,7 @@ def run_exploit(self):
     """Simulate exploit execution"""
     self.output.append("[+] Running simulated exploit...")
     try:
-        # This is just simulation - real exploits would go here
+        # Simulate command execution
         result = subprocess.check_output("whoami", shell=True)
         self.output.append(f"[+] Current user: {result.decode().strip()}")
         
@@ -328,3 +330,9 @@ def run_app():
     window = FerdiGhost()
     window.show()
     sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    run_app()
+
+
